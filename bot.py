@@ -1,96 +1,121 @@
-from flask import Flask, request
+  from flask import Flask, request
 import requests
 import os
 
-# ===== BOT CONFIG =====
-TOKEN = "7988782705:AAHNIslg-MAz0PYkPcBwpqHwceCKlisrwaA"
-URL = f"https://api.telegram.org/bot{TOKEN}/"
+=========================
 
-app = Flask(__name__)
+TELEGRAM CONFIG
 
-# ===== TELEGRAM SEND FUNCTION =====
+=========================
+
+TOKEN = "7988782705:AAHrQd8ZJB_W0YgP1r1BVloGTXhJnQ7r-is"
+BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
+
+app = Flask(name)
+
+=========================
+
+TELEGRAM HELPER
+
+=========================
+
 def send(chat_id, text):
-    try:
-        response = requests.get(
-            URL + "sendMessage",
-            params={
-                "chat_id": chat_id,
-                "text": text
-            }
-        )
+try:
+r = requests.get(
+BASE_URL + "sendMessage",
+params={
+"chat_id": chat_id,
+"text": text
+},
+timeout=10
+)
 
-        print("SendMessage status:", response.status_code)
-        print("SendMessage response:", response.text)
+    print("Send status:", r.status_code)
+    print("Send response:", r.text)
 
-    except Exception as e:
-        print("Send error:", e)
+except Exception as e:
+    print("SEND ERROR:", e)
 
+=========================
 
-# ===== HOME ROUTE =====
+HOME ROUTE
+
+=========================
+
 @app.route("/")
 def home():
-    return "Maveconnect Bot is running!"
+return "Maveconnect Bot 12 is running!"
 
+=========================
 
-# ===== WEBHOOK ROUTE =====
+WEBHOOK ROUTE
+
+=========================
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    try:
-        data = request.get_json()
+try:
+data = request.get_json()
 
-        print("🔥 UPDATE:", data)
+    print("🔥 UPDATE:", data)
 
-        if not data:
-            return "ok"
+    if not data:
+        return "ok"
 
-        message = data.get("message")
+    message = data.get("message")
 
-        if not message:
-            return "ok"
+    if not message:
+        return "ok"
 
-        chat_id = message["chat"]["id"]
-        text = message.get("text", "")
+    chat_id = message["chat"]["id"]
+    text = message.get("text", "").strip()
 
-        print("📩 TEXT:", text)
+    print("📩 TEXT:", text)
 
-        # START
-        if text == "/start":
-            send(
-                chat_id,
-                "🚀 Welcome to Maveconnect Bot!\n\n"
-                "Available commands:\n"
-                "/help\n"
-                "/test"
-            )
+    # START
+    if text == "/start":
+        send(
+            chat_id,
+            "🚀 Welcome to Maveconnect!\n\n"
+            "Commands:\n"
+            "/help\n"
+            "/test\n"
+            "/price BTC"
+        )
 
-        # HELP
-        elif text == "/help":
-            send(
-                chat_id,
-                "📋 Commands:\n"
-                "/start - Start bot\n"
-                "/help - Show help\n"
-                "/test - Test bot"
-            )
+    # HELP
+    elif text == "/help":
+        send(
+            chat_id,
+            "📋 Available Commands:\n"
+            "/start\n"
+            "/help\n"
+            "/test\n"
+            "/price BTC"
+        )
 
-        # TEST
-        elif text == "/test":
-            send(chat_id, "✅ Test successful")
+    # TEST
+    elif text == "/test":
+        send(chat_id, "✅ Bot is responding correctly.")
 
-        else:
-            send(
-                chat_id,
-                "🤖 Command received.\n"
-                "Use /help to see available commands."
-            )
+    # PRICE (placeholder)
+    elif text.lower().startswith("/price"):
+        send(chat_id, "💰 Price feature coming next.")
 
-    except Exception as e:
-        print("❌ ERROR:", e)
+    else:
+        send(chat_id, "🤖 Command received. Use /help.")
 
-    return "ok"
+except Exception as e:
+    print("❌ ERROR:", e)
 
+return "ok"
 
-# ===== START SERVER =====
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+=========================
+
+START SERVER
+
+=========================
+
+if name == "main":
+port = int(os.environ.get("PORT", 10000))
+app.run(host="0.0.0.0", port=port)
