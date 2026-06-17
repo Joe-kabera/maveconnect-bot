@@ -22,6 +22,7 @@ def home():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
+    print("Webhook hit:", data)
     return "ok"
 
 
