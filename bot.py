@@ -2,7 +2,7 @@ from flask import Flask, request
 import requests
 import os
 
-TOKEN = "7988782705:AAHrQd8ZJB_W0YgP1r1BVloGTXhJnQ7r-is"
+TOKEN = "7988782705:AAEGbPteBY3V0l1Abp9ZNO8Y3TMQk5Zjz5U"
 BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
 
 app = Flask(__name__)
@@ -40,10 +40,23 @@ def get_price(symbol):
     if not coin:
         return None
 
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd"
-    r = requests.get(url).json()
+    try:
+        url = f"https://api.coingecko.com/api/v3/simple/price"
+        params = {
+            "ids": coin,
+            "vs_currencies": "usd"
+        }
 
-    return r.get(coin, {}).get("usd")
+        r = requests.get(url, params=params, timeout=10)
+        data = r.json()
+
+        print("COINGECKO RESPONSE:", data)
+
+        return data.get(coin, {}).get("usd")
+
+    except Exception as e:
+        print("PRICE ERROR:", e)
+        return None
 
 
 # =====================
