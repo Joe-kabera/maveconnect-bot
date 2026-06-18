@@ -29,23 +29,27 @@ def send(chat_id, text):
 
 
 # =====================
-# GET PRICE (FIXED + SAFE)
+# PRICE FUNCTION (STABLE VERSION)
 # =====================
 def get_price(symbol):
-    symbol = symbol.lower()
+    symbol = symbol.lower().strip()
 
     mapping = {
         "btc": "bitcoin",
         "eth": "ethereum",
         "sol": "solana",
         "bnb": "binancecoin",
-        "xrp": "ripple"
+        "xrp": "ripple",
+        "ada": "cardano",
+        "doge": "dogecoin",
+        "ltc": "litecoin",
+        "dot": "polkadot"
     }
 
     coin = mapping.get(symbol)
 
     if not coin:
-        print("UNSUPPORTED SYMBOL:", symbol)
+        print("UNSUPPORTED COIN:", symbol)
         return None
 
     try:
@@ -62,13 +66,20 @@ def get_price(symbol):
 
         print("STATUS CODE:", response.status_code)
 
+        if response.status_code != 200:
+            print("API ERROR:", response.text)
+            return None
+
         data = response.json()
         print("COINGECKO RESPONSE:", data)
 
-        if isinstance(data, dict) and coin in data:
-            return data[coin].get("usd")
+        if not isinstance(data, dict):
+            return None
 
-        return None
+        if coin not in data:
+            return None
+
+        return data[coin].get("usd")
 
     except Exception as e:
         print("PRICE ERROR:", e)
@@ -107,35 +118,45 @@ def webhook():
 
         # START
         if text == "/start":
-            send(chat_id, "🚀 Welcome to Maveconnect Bot!")
+            send(chat_id, "🚀 Welcome to Maveconnect Crypto Bot!")
 
         # HELP
         elif text == "/help":
-            send(chat_id, "Commands:\n/start\n/help\n/test\n/btc btc")
+            send(
+                chat_id,
+                "Commands:\n"
+                "/start\n"
+                "/help\n"
+                "/test\n"
+                "/btc btc\n"
+                "/btc eth\n"
+                "/btc sol"
+            )
 
         # TEST
         elif text == "/test":
-            send(chat_id, "✅ Bot working")
+            send(chat_id, "✅ Bot is working!")
 
-        # PRICE COMMAND
+        # PRICE CHECK
         elif text.lower().startswith("/btc"):
             parts = text.split()
 
             if len(parts) < 2:
                 send(chat_id, "Usage: /btc BTC")
+                return "ok"
+
+            symbol = parts[1]
+            price = get_price(symbol)
+
+            print("FINAL PRICE:", price)
+
+            if price is not None:
+                send(chat_id, f"💰 {symbol.upper()} Price: ${price}")
             else:
-                symbol = parts[1]
-                price = get_price(symbol)
-
-                print("FINAL PRICE:", price)
-
-                if price is not None:
-                    send(chat_id, f"💰 {symbol.upper()} Price: ${price}")
-                else:
-                    send(chat_id, "❌ Price not available. Try again later.")
+                send(chat_id, "⚠️ Price temporarily unavailable. Try again.")
 
         else:
-            send(chat_id, "🤖 Command not recognized. Use /help")
+            send(chat_id, "🤖 Unknown command. Use /help")
 
     except Exception as e:
         print("WEBHOOK ERROR:", e)
