@@ -3,7 +3,7 @@ import requests
 import os
 
 # =====================
-# BOT CONFIG
+# CONFIG
 # =====================
 TOKEN = "7988782705:AAFS9c5D_v-o15b5hBJZmNXW4aol4BgtUf4"
 BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 
 # =====================
-# SEND MESSAGE FUNCTION
+# SEND MESSAGE
 # =====================
 def send(chat_id, text):
     try:
@@ -29,7 +29,7 @@ def send(chat_id, text):
 
 
 # =====================
-# PRICE FUNCTION
+# GET PRICE (FIXED + SAFE)
 # =====================
 def get_price(symbol):
     symbol = symbol.lower()
@@ -45,11 +45,14 @@ def get_price(symbol):
     coin = mapping.get(symbol)
 
     if not coin:
+        print("UNSUPPORTED SYMBOL:", symbol)
         return None
 
     try:
+        url = "https://api.coingecko.com/api/v3/simple/price"
+
         response = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price",
+            url,
             params={
                 "ids": coin,
                 "vs_currencies": "usd"
@@ -57,11 +60,15 @@ def get_price(symbol):
             timeout=10
         )
 
-        data = response.json()
+        print("STATUS CODE:", response.status_code)
 
+        data = response.json()
         print("COINGECKO RESPONSE:", data)
 
-        return data.get(coin, {}).get("usd")
+        if isinstance(data, dict) and coin in data:
+            return data[coin].get("usd")
+
+        return None
 
     except Exception as e:
         print("PRICE ERROR:", e)
@@ -88,13 +95,15 @@ def webhook():
         if not data:
             return "ok"
 
-        message = data.get("message")
+        message = data.get("message") or data.get("edited_message")
 
         if not message:
             return "ok"
 
         chat_id = message["chat"]["id"]
         text = message.get("text", "").strip()
+
+        print("TEXT:", text)
 
         # START
         if text == "/start":
@@ -108,8 +117,8 @@ def webhook():
         elif text == "/test":
             send(chat_id, "✅ Bot working")
 
-        # BTC PRICE
-        elif text.startswith("/btc"):
+        # PRICE COMMAND
+        elif text.lower().startswith("/btc"):
             parts = text.split()
 
             if len(parts) < 2:
@@ -118,10 +127,12 @@ def webhook():
                 symbol = parts[1]
                 price = get_price(symbol)
 
+                print("FINAL PRICE:", price)
+
                 if price is not None:
                     send(chat_id, f"💰 {symbol.upper()} Price: ${price}")
                 else:
-                    send(chat_id, "❌ Coin not supported or API error")
+                    send(chat_id, "❌ Price not available. Try again later.")
 
         else:
             send(chat_id, "🤖 Command not recognized. Use /help")
