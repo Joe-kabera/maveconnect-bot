@@ -2,172 +2,176 @@ from flask import Flask, request
 import requests
 import os
 
-# =====================
-# BOT CONFIG
-# =====================
 TOKEN = "7988782705:AAFS9c5D_v-o15b5hBJZmNXW4aol4BgtUf4"
 BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
 
-app = Flask(__name__)
+app = Flask(name)
 
+=====================
 
-# =====================
-# SEND MESSAGE FUNCTION
-# =====================
+SEND MESSAGE
+
+=====================
+
 def send(chat_id, text):
-    try:
-        response = requests.get(
-            BASE_URL + "sendMessage",
-            params={
-                "chat_id": chat_id,
-                "text": text
-            },
-            timeout=10
-        )
+try:
+response = requests.get(
+BASE_URL + "sendMessage",
+params={
+"chat_id": chat_id,
+"text": text
+},
+timeout=10
+)
+print("SEND STATUS:", response.status_code)
+print("SEND RESPONSE:", response.text)
 
-        print("SEND STATUS:", response.status_code)
+except Exception as e:
+    print("SEND ERROR:", e)
 
-    except Exception as e:
-        print("SEND ERROR:", e)
+=====================
 
+GET CRYPTO PRICE
 
-# =====================
-# PRICE FUNCTION
-# =====================
+=====================
+
 def get_price(symbol):
-    symbol = symbol.lower()
+symbol = symbol.lower()
 
-    mapping = {
-        "btc": "bitcoin",
-        "eth": "ethereum",
-        "sol": "solana",
-        "bnb": "binancecoin",
-        "xrp": "ripple"
-    }
+mapping = {
+    "btc": "bitcoin",
+    "eth": "ethereum",
+    "sol": "solana",
+    "bnb": "binancecoin",
+    "xrp": "ripple"
+}
 
-    coin = mapping.get(symbol)
+coin = mapping.get(symbol)
 
-    if not coin:
-        return None
+if not coin:
+    print("UNSUPPORTED COIN:", symbol)
+    return None
 
-    try:
-        response = requests.get(
-            "https://api.coingecko.com/api/v3/simple/price",
-            params={
-                "ids": coin,
-                "vs_currencies": "usd"
-            },
-            timeout=10
-        )
+try:
+    url = "https://api.coingecko.com/api/v3/simple/price"
 
-        data = response.json()
+    response = requests.get(
+        url,
+        params={
+            "ids": coin,
+            "vs_currencies": "usd"
+        },
+        timeout=10
+    )
 
-        print("COINGECKO:", data)
+    print("API STATUS:", response.status_code)
 
-        return data.get(coin, {}).get("usd")
+    data = response.json()
 
-    except Exception as e:
-        print("PRICE ERROR:", e)
-        return None
+    print("COINGECKO DATA:", data)
 
+    if coin in data:
+        return data[coin]["usd"]
 
-# =====================
-# HOME ROUTE
-# =====================
+    return None
+
+except Exception as e:
+    print("PRICE ERROR:", e)
+    return None
+
+=====================
+
+HOME
+
+=====================
+
 @app.route("/")
 def home():
-    return "Maveconnect Bot is running!"
+return "Maveconnect Bot is running!"
 
+=====================
 
-# =====================
-# WEBHOOK ROUTE
-# =====================
+WEBHOOK
+
+=====================
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    try:
-        data = request.get_json()
+try:
+data = request.get_json()
 
-        print("UPDATE:", data)
+    print("UPDATE:", data)
 
-        if not data:
-            return "ok"
+    if not data:
+        return "ok"
 
-        message = data.get("message") or data.get("edited_message")
+    message = data.get("message")
 
-        if not message:
-            return "ok"
+    if not message:
+        return "ok"
 
-        chat_id = message["chat"]["id"]
-        text = message.get("text", "").strip()
+    chat_id = message["chat"]["id"]
+    text = message.get("text", "").strip()
 
-        # START
-        if text == "/start":
-            send(
-                chat_id,
-                "🚀 Welcome to Maveconnect Bot!\n\n"
-                "Commands:\n"
-                "/help\n"
-                "/test\n"
-                "/btc BTC"
-            )
+    print("TEXT:", text)
 
-        # HELP
-        elif text == "/help":
-            send(
-                chat_id,
-                "📋 Available Commands:\n"
-                "/start\n"
-                "/help\n"
-                "/test\n"
-                "/btc BTC\n"
-                "/btc ETH\n"
-                "/btc SOL"
-            )
+    # START
+    if text == "/start":
+        send(chat_id, "🚀 Welcome to Maveconnect Bot!")
 
-        # TEST
-        elif text == "/test":
-            send(chat_id, "✅ Bot is working.")
+    # HELP
+    elif text == "/help":
+        send(
+            chat_id,
+            "Commands:\n"
+            "/start\n"
+            "/help\n"
+            "/test\n"
+            "/btc btc\n"
+            "/btc eth"
+        )
 
-        # PRICE CHECK
-        elif text.lower().startswith("/btc"):
-            parts = text.split()
+    # TEST
+    elif text == "/test":
+        send(chat_id, "✅ Bot working")
 
-            if len(parts) < 2:
-                send(chat_id, "Usage: /btc BTC")
-            else:
-                symbol = parts[1]
+    # PRICE COMMAND
+    elif text.lower().startswith("/btc"):
 
-                price = get_price(symbol)
+        parts = text.split()
 
-                if price is not None:
-                    send(
-                        chat_id,
-                        f"💰 {symbol.upper()} Price: ${price}"
-                    )
-                else:
-                    send(
-                        chat_id,
-                        "❌ Coin not supported.\n"
-                        "Try BTC, ETH, SOL, BNB or XRP."
-                    )
+        print("PARTS:", parts)
 
-        # UNKNOWN COMMAND
+        if len(parts) < 2:
+            send(chat_id, "Usage: /btc BTC")
         else:
-            send(
-                chat_id,
-                "🤖 Command not recognized.\n"
-                "Use /help."
-            )
+            symbol = parts[1]
 
-    except Exception as e:
-        print("WEBHOOK ERROR:", e)
+            print("SYMBOL:", symbol)
 
-    return "ok"
+            price = get_price(symbol)
 
+            print("PRICE:", price)
 
-# =====================
-# RUN SERVER
-# =====================
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+            if price is not None:
+                send(
+                    chat_id,
+                    f"💰 {symbol.upper()} Price: ${price}"
+                )
+            else:
+                send(
+                    chat_id,
+                    "❌ Price unavailable or coin unsupported."
+                )
+
+    else:
+        send(chat_id, "🤖 Command not recognized")
+
+except Exception as e:
+    print("WEBHOOK ERROR:", e)
+
+return "ok"
+
+if name == "main":
+port = int(os.environ.get("PORT", 10000))
+app.run(host="0.0.0.0", port=port)
