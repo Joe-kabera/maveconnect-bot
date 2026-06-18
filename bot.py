@@ -1,70 +1,92 @@
-def get_price(symbol):
-    symbol = symbol.lower().strip()
+from flask import Flask, request
+import requests
+import os
 
-    # Binance symbols (faster API)
-    binance_map = {
-        "btc": "BTCUSDT",
-        "eth": "ETHUSDT",
-        "sol": "SOLUSDT",
-        "bnb": "BNBUSDT",
-        "xrp": "XRPUSDT",
-        "ada": "ADAUSDT",
-        "doge": "DOGEUSDT",
-        "ltc": "LTCUSDT",
-        "dot": "DOTUSDT"
-    }
+TOKEN = "7988782705:AAFS9c5D_v-o15b5hBJZmNXW4aol4BgtUf4"
+BASE_URL = f"https://api.telegram.org/bot{TOKEN}/"
 
-    pair = binance_map.get(symbol)
+app = Flask(__name__)
 
-    # -------------------------
-    # 1. TRY BINANCE FIRST
-    # -------------------------
+
+def send(chat_id, text):
     try:
-        url = f"https://api.binance.com/api/v3/ticker/price"
-        r = requests.get(url, params={"symbol": pair}, timeout=8)
-
-        data = r.json()
-        print("BINANCE RESPONSE:", data)
-
-        if "price" in data:
-            return float(data["price"])
-
+        requests.get(
+            BASE_URL + "sendMessage",
+            params={"chat_id": chat_id, "text": text},
+            timeout=10
+        )
     except Exception as e:
-        print("BINANCE ERROR:", e)
+        print("SEND ERROR:", e)
 
-    # -------------------------
-    # 2. FALLBACK (COINGECKO)
-    # -------------------------
-    fallback_map = {
+
+def get_price(symbol):
+    mapping = {
         "btc": "bitcoin",
         "eth": "ethereum",
         "sol": "solana",
         "bnb": "binancecoin",
-        "xrp": "ripple",
-        "ada": "cardano",
-        "doge": "dogecoin",
-        "ltc": "litecoin",
-        "dot": "polkadot"
+        "xrp": "ripple"
     }
 
-    coin = fallback_map.get(symbol)
-
+    coin = mapping.get(symbol.lower())
     if not coin:
         return None
 
     try:
-        url = "https://api.coingecko.com/api/v3/simple/price"
         r = requests.get(
-            url,
+            "https://api.coingecko.com/api/v3/simple/price",
             params={"ids": coin, "vs_currencies": "usd"},
-            timeout=8
+            timeout=10
         )
 
         data = r.json()
-        print("COINGECKO RESPONSE:", data)
-
         return data.get(coin, {}).get("usd")
 
-    except Exception as e:
-        print("COINGECKO ERROR:", e)
+    except:
         return None
+
+
+@app.route("/")
+def home():
+    return "Bot is running!"
+
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.get_json()
+
+    if not data:
+        return "ok"
+
+    message = data.get("message")
+    if not message:
+        return "ok"
+
+    chat_id = message["chat"]["id"]
+    text = message.get("text", "").strip()
+
+    if text == "/start":
+        send(chat_id, "🚀 Bot is live!")
+
+    elif text.startswith("/btc"):
+        parts = text.split()
+
+        if len(parts) < 2:
+            send(chat_id, "Usage: /btc BTC")
+        else:
+            price = get_price(parts[1])
+
+            if price:
+                send(chat_id, f"💰 Price: ${price}")
+            else:
+                send(chat_id, "Price unavailable")
+
+    else:
+        send(chat_id, "Use /btc BTC")
+
+    return "ok"
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
